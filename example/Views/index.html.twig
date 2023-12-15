@@ -5,28 +5,49 @@
     <body>
         {{ include('navbar.html.twig') }}
         {% if user_id != null %}
-            <table class="table table-bordered table-hover table-dark">
+            <table class="table table-bordered table-hover table-dark" style="margin-top: 50px">
                 <tr>
                     <th>#</th>
                     <th>Product</th>
                     <th>Next payment date</th>
-                    <th>Subscription deadline</th>
+                    <th>Subscription expiration date</th>
                     <th>Subscription cancel date</th>
                     <th>Actions</th>
                 </tr>
                 {% for subscription in subscriptions %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td>Product</td>
-                        <td>Next payment date</td>
-                        <td>Subscription deadline</td>
-                        <td>Subscription cancel date</td>
-                        <td>Actions</td>
+                        <td>{{ subscription.productName }}</td>
+                        <td>{{ subscription.nextPaymentDate }}</td>
+                        <td>{{ subscription.expirationDate }}</td>
+                        <td>{{ subscription.unSubscriptionDate }}</td>
+                        <td>
+                            {% if subscription.status != 'canceled' %}
+                                <form method="POST" action="http://localhost:8000/subscriptions/cancel" onsubmit="checkCancel(event)">
+                                    <input type="hidden" value="{{ subscription.id }}" name="subscription_id">
+                                    <input type="submit" class="btn btn-danger" value="Cancel">
+                                </form>
+                            {% endif %}
+                            <form method="POST" action="http://localhost:8000/subscriptions/getPaymentStory">
+                                <input type="hidden" value="{{ subscription.id }}" name="subscription_id">
+                                <input type="submit" class="btn btn-warning" value="See payment history">
+                            </form>
+                        </td>
                     </tr>
                 {% endfor %}
             </table>
         {% else %}
-            <h1>Log in or register to continue</h1>
+            <h1 style="text-align: center">Log in or register to continue</h1>
         {% endif %}
     </body>
+
+    <script>
+        function checkCancel(event) {
+            event.preventDefault();
+            let answer = confirm('Are you sure you want to cancel subscription?');
+            if (answer) {
+                event.currentTarget.submit();
+            }
+        }
+    </script>
 </html>

@@ -15,9 +15,9 @@ class App
                 'controller' => MainController::class,
                 'action' => 'index'
             ],
-            '/payments/new' => [
+            '/subscriptions/new' => [
                 'controller' => MainController::class,
-                'action' => 'createPayment'
+                'action' => 'createSubscription'
             ],
             '/users/new' => [
                 'controller' => UserController::class,
@@ -26,12 +26,24 @@ class App
             '/users/get-login-page' => [
                 'controller' => UserController::class,
                 'action' => 'getLoginPage'
+            ],
+            '/users/logout' => [
+                'controller' => UserController::class,
+                'action' => 'logout'
             ]
         ],
         'POST' => [
-            '/payments/create' => [
+            '/subscriptions/cancel' => [
                 'controller' => MainController::class,
-                'action' => 'savePayment'
+                'action' => 'cancelSubscription'
+            ],
+            '/subscriptions/store' => [
+                'controller' => MainController::class,
+                'action' => 'storeSubscription'
+            ],
+            '/subscriptions/getPaymentStory' => [
+                'controller' => MainController::class,
+                'action' => 'getPaymentStory'
             ],
             '/users/create' => [
                 'controller' => UserController::class,
@@ -40,7 +52,7 @@ class App
             '/users/login' => [
                 'controller' => UserController::class,
                 'action' => 'login'
-            ]
+            ],
         ]
     ];
 
