@@ -1,0 +1,20 @@
+{
+    "name": "daymos/stripe-recurrent",
+    "description": "This package provides basic functionality for recurrent payments with Stripe API",
+    "type": "library",
+    "require": {
+        "php": "^8.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Daymos\\StripeRecurrent\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Daym0sss",
+            "email": "lavandos322@gmail.com"
+        }
+    ]
+}
