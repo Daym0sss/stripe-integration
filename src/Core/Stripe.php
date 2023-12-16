@@ -47,6 +47,19 @@ class Stripe
         return $stripe->subscriptions->all(['customer' => $customer_id, 'status' => 'all'])->data;
     }
 
+    public static function getPaymentIntents(string $subscription_id): array
+    {
+        $stripe = new StripeClient(Utils::env('STRIPE_SECRET'));
+        $invoices = $stripe->invoices->all(['subscription' => $subscription_id]);
+        $payments = [];
+        foreach ($invoices as $invoice)
+        {
+            $payments []= $stripe->paymentIntents->retrieve($invoice->payment_intent);
+        }
+
+        return $payments;
+    }
+
     public static function getPaymentStory(string $subscription_id): array
     {
         $stripe = new StripeClient(Utils::env('STRIPE_SECRET'));

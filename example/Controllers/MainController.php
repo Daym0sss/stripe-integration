@@ -5,6 +5,9 @@ namespace Daymos\ExampleApp\Controllers;
 use Daymos\ExampleApp\Core\Controller;
 use Daymos\StripeRecurrent\Core\Stripe;
 use Daymos\StripeRecurrent\Core\Utils;
+use Daymos\StripeRecurrent\Database\ErrorLog;
+use Daymos\StripeRecurrent\Database\Payment;
+use Daymos\StripeRecurrent\Database\Subscription;
 use Stripe\Exception\ApiErrorException;
 use Stripe\PaymentIntent;
 use Stripe\StripeClient;
@@ -27,8 +30,6 @@ class MainController extends Controller
         {
             foreach ($subscriptionsInfo as $subscriptionInfo)
             {
-                $price = Stripe::getPrice($subscriptionInfo['items']['data'][0]['price']->id);
-
                 if ($subscriptionInfo['status'] == 'canceled')
                 {
                     $unSubscriptionDate = date('F j, Y H:i:s', $subscriptionInfo['canceled_at']);
@@ -40,7 +41,7 @@ class MainController extends Controller
 
                 $subscriptions []= [
                     'id' => $subscriptionInfo['id'],
-                    'productName' => Stripe::getProduct($price->product)->name,
+                    'productName' => Stripe::getProduct($subscriptionInfo['items']['data'][0]['price']['product'])->name,
                     'nextPaymentDate' => date('F j, Y H:i:s', $subscriptionInfo['current_period_end']),
                     'expirationDate' => date('F j, Y H:i:s', $subscriptionInfo['current_period_end']),
                     'unSubscriptionDate' => $unSubscriptionDate,
@@ -71,7 +72,7 @@ class MainController extends Controller
         ]);
     }
 
-    public function getPaymentStory()
+    public function getPaymentStory(): void
     {
         session_start();
         $user_id = $_SESSION['user_id'];
@@ -115,10 +116,41 @@ class MainController extends Controller
                 ]
             ]);
 
+            $paymentIntents = Stripe::getPaymentIntents($subscription->id);
+
+            foreach ($paymentIntents as $paymentIntent)
+            {
+                /**
+                 * @var $paymentIntent PaymentIntent
+                 */
+                Payment::create([
+                    'payment_id' => $paymentIntent->id,
+                    'payment_datetime' => date('F j, Y H:i:s', $paymentIntent->created),
+                    'payment_status' => $paymentIntent->status
+                ]);
+            }
+
+            Subscription::create([
+                'subscription_id' => $subscription->id,
+                'created_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+                'productName' => Stripe::getProduct($subscription->items->data[0]->price->product)->name,
+                'nextPaymentDate' => date('F j, Y H:i:s', $subscription->current_period_end),
+                'expirationDate' => date('F j, Y H:i:s', $subscription->current_period_end),
+                'unSubscriptionDate' => ($subscription->status == 'canceled')
+                                        ? 'Still active'
+                                        : date('F j, Y H:i:s', $subscription->canceled_at)
+            ]);
+
+
             echo json_encode(['success' => true, 'subscription' => $subscription]);
         }
         catch (ApiErrorException $exception)
         {
+            ErrorLog::create([
+                'log_datetime' => (new \DateTime())->format('Y-m-d H:i:s'),
+                'log_error_message' => $exception->getMessage()
+            ]);
+
             echo json_encode(['error' => $exception->getMessage()]);
         }
     }
