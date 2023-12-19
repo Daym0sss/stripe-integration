@@ -12,11 +12,17 @@ class Payment extends BaseEntity implements CrudInterface
     {
         $values = '"' . $params['payment_id'] . '", ';
         $values .= '"' . $params['payment_datetime'] . '", ';
-        $values .= '"' . $params['payment_status'] . '"';
+        $values .= '"' . $params['payment_status'] . '", ';
+        $values .= '"' . $params['customer_id'] . '"';
         $table = self::$tableName;
 
-        $sql = "INSERT INTO $table(payment_id, payment_datetime, payment_status) VALUES($values)";
+        $sql = "INSERT INTO $table(payment_id, payment_datetime, payment_status, customer_id) VALUES($values)";
         $conn = Connection::getInstance();
         $conn->query($sql);
+    }
+
+    public static function update(array $params): void
+    {
+        // TODO: Implement update() method.
     }
 }

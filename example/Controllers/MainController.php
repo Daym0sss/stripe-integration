@@ -116,42 +116,74 @@ class MainController extends Controller
                 ]
             ]);
 
-            $paymentIntents = Stripe::getPaymentIntents($subscription->id);
-
-            foreach ($paymentIntents as $paymentIntent)
-            {
-                /**
-                 * @var $paymentIntent PaymentIntent
-                 */
-                Payment::create([
-                    'payment_id' => $paymentIntent->id,
-                    'payment_datetime' => date('F j, Y H:i:s', $paymentIntent->created),
-                    'payment_status' => $paymentIntent->status
-                ]);
-            }
-
-            Subscription::create([
-                'subscription_id' => $subscription->id,
-                'created_at' => (new \DateTime())->format('Y-m-d H:i:s'),
-                'productName' => Stripe::getProduct($subscription->items->data[0]->price->product)->name,
-                'nextPaymentDate' => date('F j, Y H:i:s', $subscription->current_period_end),
-                'expirationDate' => date('F j, Y H:i:s', $subscription->current_period_end),
-                'unSubscriptionDate' => ($subscription->status == 'canceled')
-                                        ? 'Still active'
-                                        : date('F j, Y H:i:s', $subscription->canceled_at)
-            ]);
-
-
             echo json_encode(['success' => true, 'subscription' => $subscription]);
         }
         catch (ApiErrorException $exception)
         {
-            ErrorLog::create([
-                'log_datetime' => (new \DateTime())->format('Y-m-d H:i:s'),
-                'log_error_message' => $exception->getMessage()
-            ]);
-
             echo json_encode(['error' => $exception->getMessage()]);
+        }
+    }
+
+    public function webhook(): void
+    {
+        \Stripe\Stripe::setApiKey(Utils::env('STRIPE_SECRET'));
+        $payload = file_get_contents("php://input");
+        $sig_header = $_SERVER["HTTP_STRIPE_SIGNATURE"];
+        $event_data = json_decode($payload, true);
+
+        switch ($event_data['type'])
+        {
+            case 'payment_intent.payment_failed':
+            case 'payment_intent.succeeded':
+            {
+                $payment = $event_data['data']['object'];
+
+                if (strlen($payment['customer']) > 5)
+                {
+                    Payment::create([
+                        'payment_id' => $payment['id'],
+                        'customer_id' => $payment['customer'],
+                        'payment_datetime' => date('F j, Y H:i:s', $payment['created']),
+                        'payment_status' => $payment['status']
+                    ]);
+                }
+
+                break;
+            }
+            case 'customer.subscription.created':
+            {
+                $subscription = $event_data['data']['object'];
+                Subscription::create([
+                    'subscription_id' => $subscription['id'],
+                    'customer_id' => $subscription['customer'],
+                    'created_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+                    'updated_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+                    'productName' => Stripe::getProduct($subscription['items']['data'][0]['price']['product'])->name,
+                    'nextPaymentDate' => date('F j, Y H:i:s', $subscription['current_period_end']),
+                    'expirationDate' => date('F j, Y H:i:s', $subscription['current_period_end']),
+                    'unSubscriptionDate' => ($subscription['status'] != 'canceled')
+                        ? 'Still active'
+                        : date('F j, Y H:i:s', $subscription['canceled_at'])
+                ]);
+
+                break;
+            }
+            case 'customer.subscription.deleted':
+            case 'customer.subscription.updated':
+            {
+                $subscription = $event_data['data']['object'];
+                Subscription::update([
+                    'subscription_id' => $subscription['id'],
+                    'updated_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+                    'nextPaymentDate' => date('F j, Y H:i:s', $subscription['current_period_end']),
+                    'expirationDate' => date('F j, Y H:i:s', $subscription['current_period_end']),
+                    'unSubscriptionDate' => ($subscription['status'] != 'canceled')
+                        ? 'Still active'
+                        : date('F j, Y H:i:s', $subscription['canceled_at'])
+                ]);
+
+                break;
+            }
         }
     }
 }

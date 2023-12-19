@@ -53,6 +53,10 @@ class App
                 'controller' => UserController::class,
                 'action' => 'login'
             ],
+            '/webhooks' => [
+                'controller' => MainController::class,
+                'action' => 'webhook'
+            ]
         ]
     ];
 
